@@ -1,0 +1,132 @@
+:root {
+  --bg:#0e0f11; --surface:#16181c; --surface2:#1e2128; --surface3:#262a33;
+  --border:rgba(255,255,255,0.07); --border-strong:rgba(255,255,255,0.14);
+  --text:#e8eaf0; --text-muted:#7a8090; --text-dim:#4a5060;
+  --accent:#4f8ef7; --accent-dim:rgba(79,142,247,0.12);
+  --green:#3fcf8e; --green-dim:rgba(63,207,142,0.12);
+  --red:#f7614f; --red-dim:rgba(247,97,79,0.12);
+  --amber:#f5a623; --amber-dim:rgba(245,166,35,0.12);
+  --purple:#a78bfa; --purple-dim:rgba(167,139,250,0.12);
+  --teal:#2dd4bf; --radius:8px; --radius-lg:12px;
+}
+
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+}
+
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  font-size:14px;
+  line-height:1.5;
+}
+
+.mono{
+  font-family:'DM Mono',monospace;
+}
+
+.container{
+  max-width:1200px;
+  margin:0 auto;
+  padding:2rem 1.5rem 4rem;
+}
+
+.grid-4{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+  margin-bottom:1.25rem;
+}
+
+.grid-2{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:1rem;
+  margin-bottom:1rem;
+}
+
+@media(max-width:800px){
+  .grid-4{
+    grid-template-columns:repeat(2,1fr);
+  }
+  .grid-2{
+    grid-template-columns:1fr;
+  }
+}
+
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  padding:1.25rem;
+}
+
+.card-title{
+  font-size:11px;
+  font-weight:500;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--text-dim);
+  margin-bottom:12px;
+}
+
+.section-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:12px;
+}
+
+.edit-btn{
+  font-size:11px;
+  padding:3px 10px;
+  border-radius:5px;
+  border:1px solid var(--border-strong);
+  background:transparent;
+  color:var(--text-dim);
+  cursor:pointer;
+  font-family:'DM Sans',sans-serif;
+  transition:all 0.15s;
+}
+
+.edit-btn:hover{
+  background:var(--surface2);
+  color:var(--text);
+}
+
+.add-btn{
+  font-size:11px;
+  padding:4px 12px;
+  border-radius:6px;
+  border:1px solid rgba(79,142,247,0.3);
+  background:var(--accent-dim);
+  color:var(--accent);
+  cursor:pointer;
+  font-family:'DM Sans',sans-serif;
+  transition:all 0.15s;
+}
+
+.add-btn:hover{
+  background:rgba(79,142,247,0.2);
+}
+
+.del-btn{
+  font-size:10px;
+  padding:2px 7px;
+  border-radius:4px;
+  border:1px solid rgba(247,97,79,0.2);
+  background:transparent;
+  color:var(--red);
+  cursor:pointer;
+  font-family:'DM Sans',sans-serif;
+  opacity:0.5;
+  transition:all 0.15s;
+}
+
+.del-btn:hover{
+  opacity:1;
+  background:var(--red-dim);
+}
