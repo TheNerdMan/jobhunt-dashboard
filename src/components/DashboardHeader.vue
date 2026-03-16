@@ -15,7 +15,8 @@
           Import JSON
           <input type="file" accept=".json" style="display:none" @change="$emit('import', $event)">
         </label>
-        <button class="edit-btn" @click="$emit('reset')">Reset to defaults</button>
+        <button v-if="demoMode" class="start-using-btn" @click="$emit('startUsing')">Start using</button>
+        <button v-else class="edit-btn" @click="$emit('reset')">Reset to defaults</button>
       </div>
     </div>
   </div>
@@ -25,14 +26,48 @@
 interface Props {
   dayCount: number
   weeksSince: string
+  demoMode: boolean
 }
 
 interface Emits {
   export: []
   import: [event: Event]
   reset: []
+  startUsing: []
 }
 
 defineProps<Props>()
 defineEmits<Emits>()
 </script>
+
+<style scoped>
+.start-using-btn {
+  font-size: 11px;
+  padding: 3px 12px;
+  border-radius: 5px;
+  border: none;
+  background: #ffffff;
+  color: #0e0f11;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  animation: start-pulse 2s ease-in-out infinite;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.start-using-btn:hover {
+  opacity: 0.9;
+  transform: scale(1.03);
+  animation: none;
+}
+
+@keyframes start-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(255, 255, 255, 0);
+  }
+}
+</style>

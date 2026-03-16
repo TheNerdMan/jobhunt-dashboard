@@ -3,9 +3,11 @@
     <DashboardHeader
       :dayCount="dayCount"
       :weeksSince="weeksSince"
+      :demoMode="demoMode"
       @export="exportData"
       @import="importData"
       @reset="resetToDefaults"
+      @startUsing="startUsing"
     />
 
     <!-- Tab Navigation -->
@@ -111,6 +113,7 @@ const {
   timeline,
   notes,
   settings,
+  demoMode,
   dayCount,
   weeksSince,
   metrics,
@@ -120,6 +123,7 @@ const {
   exportData,
   importData,
   resetToDefaults,
+  startUsing,
   nextId,
   addAutoTimelineEvent,
   ensureSourceColor,

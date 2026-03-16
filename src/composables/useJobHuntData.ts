@@ -91,6 +91,7 @@ export interface ActionItem {
 
 // Constants
 const STORAGE_KEY = 'jobhunt_v3'
+const DEMO_MODE_KEY = 'jobhunt_demo_mode'
 export const DEFAULT_FOLLOW_UP_DAYS = 7
 export const DEFAULT_STALE_DAYS = 14
 export const DEFAULT_RECRUITER_CHECKIN_DAYS = 14
@@ -397,6 +398,7 @@ export interface UseJobHuntDataReturn {
   timeline: Ref<TimelineEvent[]>
   notes: Ref<Note[]>
   settings: Ref<Settings>
+  demoMode: Ref<boolean>
   
   // Computed
   dayCount: ComputedRef<number>
@@ -410,6 +412,7 @@ export interface UseJobHuntDataReturn {
   exportData: () => void
   importData: (e: Event) => void
   resetToDefaults: () => void
+  startUsing: () => void
   addAutoTimelineEvent: (text: string, type?: TimelineEvent['type']) => void
   ensureSourceColor: (source: string) => void
   
@@ -431,29 +434,34 @@ export interface UseJobHuntDataReturn {
   AVATAR_COLORS: readonly string[]
 }
 
-export function useJobHuntData(): UseJobHuntDataReturn {
-  const d = loadData()
-  const apps = ref<JobApplication[]>(d.apps)
-  const recruiters = ref<Recruiter[]>(d.recruiters)
-  const timeline = ref<TimelineEvent[]>(d.timeline)
-  const notes = ref<Note[]>(d.notes)
-  const settings = ref<Settings>(d.settings ?? {
-    followUpDays: DEFAULT_FOLLOW_UP_DAYS,
-    staleDays: DEFAULT_STALE_DAYS,
-    recruiterCheckInDays: DEFAULT_RECRUITER_CHECKIN_DAYS,
-    sourceColors: {}
-  })
+// Shared singleton refs (module-level so all composable instances share them)
+const _storedDemoMode = localStorage.getItem(DEMO_MODE_KEY)
+const demoMode = ref<boolean>(_storedDemoMode === null ? true : _storedDemoMode === 'true')
 
-  // Auto-save to localStorage
-  watch([apps, recruiters, timeline, notes, settings], () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      apps: apps.value,
-      recruiters: recruiters.value,
-      timeline: timeline.value,
-      notes: notes.value,
-      settings: settings.value
-    }))
-  }, { deep: true })
+const _d = loadData()
+const apps = ref<JobApplication[]>(_d.apps)
+const recruiters = ref<Recruiter[]>(_d.recruiters)
+const timeline = ref<TimelineEvent[]>(_d.timeline)
+const notes = ref<Note[]>(_d.notes)
+const settings = ref<Settings>(_d.settings ?? {
+  followUpDays: DEFAULT_FOLLOW_UP_DAYS,
+  staleDays: DEFAULT_STALE_DAYS,
+  recruiterCheckInDays: DEFAULT_RECRUITER_CHECKIN_DAYS,
+  sourceColors: {}
+})
+
+// Auto-save to localStorage
+watch([apps, recruiters, timeline, notes, settings], () => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    apps: apps.value,
+    recruiters: recruiters.value,
+    timeline: timeline.value,
+    notes: notes.value,
+    settings: settings.value
+  }))
+}, { deep: true })
+
+export function useJobHuntData(): UseJobHuntDataReturn {
 
   // Computed properties
   const dayCount = computed(() => Math.floor((new Date().getTime() - new Date(getDemoStartDate()).getTime()) / 86400000) + 1)
@@ -594,11 +602,29 @@ export function useJobHuntData(): UseJobHuntDataReturn {
         timeline.value = d.timeline || []
         notes.value = d.notes || []
         if (d.settings) settings.value = d.settings
+        // Importing data exits demo mode
+        demoMode.value = false
+        localStorage.setItem(DEMO_MODE_KEY, 'false')
       } catch {
         alert('Invalid JSON file.')
       }
     }
     r.readAsText(f)
+  }
+
+  function startUsing(): void {
+    apps.value = []
+    recruiters.value = []
+    timeline.value = []
+    notes.value = []
+    settings.value = {
+      followUpDays: DEFAULT_FOLLOW_UP_DAYS,
+      staleDays: DEFAULT_STALE_DAYS,
+      recruiterCheckInDays: DEFAULT_RECRUITER_CHECKIN_DAYS,
+      sourceColors: {}
+    }
+    demoMode.value = false
+    localStorage.setItem(DEMO_MODE_KEY, 'false')
   }
 
   function resetToDefaults(): void {
@@ -609,6 +635,8 @@ export function useJobHuntData(): UseJobHuntDataReturn {
     timeline.value = d.timeline
     notes.value = d.notes
     settings.value = d.settings
+    demoMode.value = true
+    localStorage.setItem(DEMO_MODE_KEY, 'true')
   }
 
   return {
@@ -618,6 +646,7 @@ export function useJobHuntData(): UseJobHuntDataReturn {
     timeline,
     notes,
     settings,
+    demoMode,
     
     // Computed
     dayCount,
@@ -631,6 +660,7 @@ export function useJobHuntData(): UseJobHuntDataReturn {
     exportData,
     importData,
     resetToDefaults,
+    startUsing,
     addAutoTimelineEvent,
     ensureSourceColor,
     
