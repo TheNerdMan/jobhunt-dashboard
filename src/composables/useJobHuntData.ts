@@ -461,184 +461,173 @@ watch([apps, recruiters, timeline, notes, settings], () => {
   }))
 }, { deep: true })
 
+// Chart legend — singleton so all composable instances share the same ref
+const sourceLegend = ref<SourceLegendItem[]>([])
+
+// Computed properties — singletons
+const dayCount = computed(() => Math.floor((new Date().getTime() - new Date(getDemoStartDate()).getTime()) / 86400000) + 1)
+const weeksSince = computed(() => (dayCount.value / 7).toFixed(1))
+
+const metrics = computed<Metrics>(() => {
+  const staleDays = settings.value.staleDays
+  const total = apps.value.length
+  const denied = apps.value.filter(a => effectiveStatus(a, staleDays) === 'Denied').length
+  const interviews = apps.value.filter(a => effectiveStatus(a, staleDays) === 'Interview').length
+  const offers = apps.value.filter(a => effectiveStatus(a, staleDays) === 'Offer').length
+  const active = apps.value.filter(a => effectiveStatus(a, staleDays) === 'Applied').length
+  const stale = apps.value.filter(a => effectiveStatus(a, staleDays) === 'Stale').length
+  const rate = total ? Math.round((denied / total) * 100) : 0
+  return { total, denied, interviews, offers, active, stale, rate }
+})
+
+const actionItems = computed<ActionItem[]>(() => {
+  const items: ActionItem[] = []
+  const { followUpDays, staleDays, recruiterCheckInDays } = settings.value
+
+  for (const app of apps.value) {
+    const days = daysAgo(app.date)
+    const status = effectiveStatus(app, staleDays)
+
+    if (app.status === 'Applied' && days !== null && days >= followUpDays && days < staleDays) {
+      items.push({
+        type: 'follow-up',
+        appId: app.id,
+        company: app.company,
+        role: app.title,
+        daysOverdue: days - followUpDays,
+        description: `No response after ${days} days — consider chasing`
+      })
+    }
+
+    if (status === 'Stale') {
+      items.push({
+        type: 'stale',
+        appId: app.id,
+        company: app.company,
+        role: app.title,
+        daysOverdue: days !== null ? days - staleDays : 0,
+        description: `${days} days since application — likely gone quiet`
+      })
+    }
+
+    if (app.status === 'Interview') {
+      items.push({
+        type: 'interview-prep',
+        appId: app.id,
+        company: app.company,
+        role: app.title,
+        daysOverdue: 0,
+        description: 'Active interview — prepare questions & research'
+      })
+    }
+  }
+
+  for (const rec of recruiters.value) {
+    const days = daysAgo(rec.date)
+    if (days !== null && days >= recruiterCheckInDays) {
+      items.push({
+        type: 'recruiter-checkin',
+        recruiterId: rec.id,
+        company: rec.company,
+        role: rec.name,
+        daysOverdue: days - recruiterCheckInDays,
+        description: `Last contact ${days} days ago — check in`
+      })
+    }
+  }
+
+  return items.sort((a, b) => b.daysOverdue - a.daysOverdue)
+})
+
+// Singleton functions
+function ensureSourceColor(source: string): void {
+  if (!source || settings.value.sourceColors[source]) return
+  const usedColors = Object.values(settings.value.sourceColors)
+  const next = SOURCE_COLOR_PALETTE.find(c => !usedColors.includes(c))
+    ?? SOURCE_COLOR_PALETTE[usedColors.length % SOURCE_COLOR_PALETTE.length]
+  settings.value.sourceColors[source] = next
+}
+
+async function refreshCharts(): Promise<void> {
+  await nextTick()
+  sourceLegend.value = buildCharts(apps.value, settings.value.sourceColors)
+}
+
+function addAutoTimelineEvent(text: string, type: TimelineEvent['type'] = 'act'): void {
+  const event: TimelineEvent = {
+    id: nextId(timeline.value),
+    date: fmtDateShort(),
+    text,
+    type,
+    auto: true
+  }
+  timeline.value.push(event)
+}
+
+function exportData(): void {
+  const a = document.createElement('a')
+  a.href = 'data:application/json,' + encodeURIComponent(JSON.stringify({
+    apps: apps.value,
+    recruiters: recruiters.value,
+    timeline: timeline.value,
+    notes: notes.value,
+    settings: settings.value
+  }, null, 2))
+  a.download = 'job-hunt-data.json'
+  a.click()
+}
+
+function importData(e: Event): void {
+  const target = e.target as HTMLInputElement
+  const f = target.files?.[0]
+  if (!f) return
+  const r = new FileReader()
+  r.onload = ev => {
+    try {
+      const result = ev.target?.result as string
+      const d: JobHuntData = JSON.parse(result)
+      apps.value = d.apps || []
+      recruiters.value = d.recruiters || []
+      timeline.value = d.timeline || []
+      notes.value = d.notes || []
+      if (d.settings) settings.value = d.settings
+      demoMode.value = false
+      localStorage.setItem(DEMO_MODE_KEY, 'false')
+    } catch {
+      alert('Invalid JSON file.')
+    }
+  }
+  r.readAsText(f)
+}
+
+function startUsing(): void {
+  apps.value = []
+  recruiters.value = []
+  timeline.value = []
+  notes.value = []
+  settings.value = {
+    followUpDays: DEFAULT_FOLLOW_UP_DAYS,
+    staleDays: DEFAULT_STALE_DAYS,
+    recruiterCheckInDays: DEFAULT_RECRUITER_CHECKIN_DAYS,
+    sourceColors: {}
+  }
+  demoMode.value = false
+  localStorage.setItem(DEMO_MODE_KEY, 'false')
+}
+
+function resetToDefaults(): void {
+  if (!confirm('Reset to default data? This will overwrite all changes.')) return
+  const d = JSON.parse(JSON.stringify(DEFAULT_DATA))
+  apps.value = d.apps
+  recruiters.value = d.recruiters
+  timeline.value = d.timeline
+  notes.value = d.notes
+  settings.value = d.settings
+  demoMode.value = true
+  localStorage.setItem(DEMO_MODE_KEY, 'true')
+}
+
 export function useJobHuntData(): UseJobHuntDataReturn {
-
-  // Computed properties
-  const dayCount = computed(() => Math.floor((new Date().getTime() - new Date(getDemoStartDate()).getTime()) / 86400000) + 1)
-  const weeksSince = computed(() => (dayCount.value / 7).toFixed(1))
-
-  const metrics = computed<Metrics>(() => {
-    const staleDays = settings.value.staleDays
-    const total = apps.value.length
-    const denied = apps.value.filter(a => effectiveStatus(a, staleDays) === 'Denied').length
-    const interviews = apps.value.filter(a => effectiveStatus(a, staleDays) === 'Interview').length
-    const offers = apps.value.filter(a => effectiveStatus(a, staleDays) === 'Offer').length
-    const active = apps.value.filter(a => effectiveStatus(a, staleDays) === 'Applied').length
-    const stale = apps.value.filter(a => effectiveStatus(a, staleDays) === 'Stale').length
-    const rate = total ? Math.round((denied / total) * 100) : 0
-    
-    return { total, denied, interviews, offers, active, stale, rate }
-  })
-
-  // Action items computed
-  const actionItems = computed<ActionItem[]>(() => {
-    const items: ActionItem[] = []
-    const { followUpDays, staleDays, recruiterCheckInDays } = settings.value
-
-    for (const app of apps.value) {
-      const days = daysAgo(app.date)
-      const status = effectiveStatus(app, staleDays)
-
-      // Follow-up needed: Applied, no response after followUpDays
-      if (app.status === 'Applied' && days !== null && days >= followUpDays && days < staleDays) {
-        items.push({
-          type: 'follow-up',
-          appId: app.id,
-          company: app.company,
-          role: app.title,
-          daysOverdue: days - followUpDays,
-          description: `No response after ${days} days — consider chasing`
-        })
-      }
-
-      // Stale alert: Applied, past stale threshold
-      if (status === 'Stale') {
-        items.push({
-          type: 'stale',
-          appId: app.id,
-          company: app.company,
-          role: app.title,
-          daysOverdue: days !== null ? days - staleDays : 0,
-          description: `${days} days since application — likely gone quiet`
-        })
-      }
-
-      // Interview prep reminder
-      if (app.status === 'Interview') {
-        items.push({
-          type: 'interview-prep',
-          appId: app.id,
-          company: app.company,
-          role: app.title,
-          daysOverdue: 0,
-          description: 'Active interview — prepare questions & research'
-        })
-      }
-    }
-
-    // Recruiter check-in reminders
-    for (const rec of recruiters.value) {
-      const days = daysAgo(rec.date)
-      if (days !== null && days >= recruiterCheckInDays) {
-        items.push({
-          type: 'recruiter-checkin',
-          recruiterId: rec.id,
-          company: rec.company,
-          role: rec.name,
-          daysOverdue: days - recruiterCheckInDays,
-          description: `Last contact ${days} days ago — check in`
-        })
-      }
-    }
-
-    // Sort: most overdue first
-    return items.sort((a, b) => b.daysOverdue - a.daysOverdue)
-  })
-
-  // Chart management
-  const sourceLegend = ref<SourceLegendItem[]>([])
-
-  // Assign a colour to a source if it doesn't already have one
-  function ensureSourceColor(source: string): void {
-    if (!source || settings.value.sourceColors[source]) return
-    const usedColors = Object.values(settings.value.sourceColors)
-    const next = SOURCE_COLOR_PALETTE.find(c => !usedColors.includes(c))
-      ?? SOURCE_COLOR_PALETTE[usedColors.length % SOURCE_COLOR_PALETTE.length]
-    settings.value.sourceColors[source] = next
-  }
-
-  async function refreshCharts(): Promise<void> {
-    await nextTick()
-    sourceLegend.value = buildCharts(apps.value, settings.value.sourceColors)
-  }
-
-  // Auto timeline event helper
-  function addAutoTimelineEvent(text: string, type: TimelineEvent['type'] = 'act'): void {
-    const event: TimelineEvent = {
-      id: nextId(timeline.value),
-      date: fmtDateShort(),
-      text,
-      type,
-      auto: true
-    }
-    timeline.value.push(event)
-  }
-
-  // Import/Export functions
-  function exportData(): void {
-    const a = document.createElement('a')
-    a.href = 'data:application/json,' + encodeURIComponent(JSON.stringify({
-      apps: apps.value,
-      recruiters: recruiters.value,
-      timeline: timeline.value,
-      notes: notes.value,
-      settings: settings.value
-    }, null, 2))
-    a.download = 'job-hunt-data.json'
-    a.click()
-  }
-
-  function importData(e: Event): void {
-    const target = e.target as HTMLInputElement
-    const f = target.files?.[0]
-    if (!f) return
-    const r = new FileReader()
-    r.onload = ev => {
-      try {
-        const result = ev.target?.result as string
-        const d: JobHuntData = JSON.parse(result)
-        apps.value = d.apps || []
-        recruiters.value = d.recruiters || []
-        timeline.value = d.timeline || []
-        notes.value = d.notes || []
-        if (d.settings) settings.value = d.settings
-        // Importing data exits demo mode
-        demoMode.value = false
-        localStorage.setItem(DEMO_MODE_KEY, 'false')
-      } catch {
-        alert('Invalid JSON file.')
-      }
-    }
-    r.readAsText(f)
-  }
-
-  function startUsing(): void {
-    apps.value = []
-    recruiters.value = []
-    timeline.value = []
-    notes.value = []
-    settings.value = {
-      followUpDays: DEFAULT_FOLLOW_UP_DAYS,
-      staleDays: DEFAULT_STALE_DAYS,
-      recruiterCheckInDays: DEFAULT_RECRUITER_CHECKIN_DAYS,
-      sourceColors: {}
-    }
-    demoMode.value = false
-    localStorage.setItem(DEMO_MODE_KEY, 'false')
-  }
-
-  function resetToDefaults(): void {
-    if (!confirm('Reset to default data? This will overwrite all changes.')) return
-    const d = JSON.parse(JSON.stringify(DEFAULT_DATA))
-    apps.value = d.apps
-    recruiters.value = d.recruiters
-    timeline.value = d.timeline
-    notes.value = d.notes
-    settings.value = d.settings
-    demoMode.value = true
-    localStorage.setItem(DEMO_MODE_KEY, 'true')
-  }
-
   return {
     // Data
     apps,
