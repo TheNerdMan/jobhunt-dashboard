@@ -53,12 +53,13 @@
       />
     </template>
 
-    <!-- Interviews: applications filtered to Interview status -->
+    <!-- Interviews: dedicated interview cards with inline notes -->
     <template v-else-if="activeTab === 'interviews'">
-      <ApplicationsTable
+      <InterviewsTab
+        ref="interviewsTabRef"
         :apps="interviewApps"
-        @save="saveApp"
-        @delete="deleteApp"
+        @save="saveInterviewApp"
+        @delete="deleteInterviewApp"
       />
     </template>
 
@@ -91,12 +92,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useJobHuntData, type JobApplication, type Recruiter, type TimelineEvent, type Note } from './composables/useJobHuntData'
 import DashboardHeader from './components/DashboardHeader.vue'
 import MetricsGrid from './components/MetricsGrid.vue'
 import ChartsGrid from './components/ChartsGrid.vue'
 import ApplicationsTable from './components/ApplicationsTable.vue'
+import InterviewsTab from './components/InterviewsTab.vue'
 import RecruitersCard from './components/RecruitersCard.vue'
 import NotesCard from './components/NotesCard.vue'
 import TimelineCard from './components/TimelineCard.vue'
@@ -135,10 +137,29 @@ const tabs = [
 ]
 const activeTab = ref('home')
 
+// Ref to InterviewsTab so we can programmatically highlight/expand a card
+const interviewsTabRef = ref<InstanceType<typeof InterviewsTab> | null>(null)
+
 // Filtered apps for Interviews tab
 const interviewApps = computed(() =>
   apps.value.filter(a => a.status === 'Interview')
 )
+
+// Translate a filtered-list index back to an index in the full apps array
+function resolveAppIndex(filteredApps: typeof apps.value, filteredIndex: number | null): number | null {
+  if (filteredIndex === null) return null
+  const item = filteredApps[filteredIndex]
+  if (!item) return null
+  return apps.value.indexOf(item)
+}
+
+function saveInterviewApp(appData: Omit<JobApplication, 'id'>, editIndex: number | null = null, previousStatus?: string): void {
+  saveApp(appData, resolveAppIndex(interviewApps.value, editIndex), previousStatus)
+}
+
+function deleteInterviewApp(filteredIndex: number): void {
+  deleteApp(resolveAppIndex(interviewApps.value, filteredIndex) ?? filteredIndex)
+}
 
 // Watch for chart updates
 watch(apps, refreshCharts, { deep: true })
@@ -146,10 +167,14 @@ watch(activeTab, (tab) => {
   if (tab === 'home') refreshCharts()
 })
 
-// Navigate to an application (from actions tab)
+// Navigate to an application (from actions tab) — switches to Interviews tab,
+// expands the card, scrolls it into view, and flashes a highlight ring
 function goToApp(appId: number | undefined) {
   if (!appId) return
-  activeTab.value = 'applications'
+  activeTab.value = 'interviews'
+  nextTick(() => {
+    interviewsTabRef.value?.highlightApp(appId)
+  })
 }
 
 // CRUD operations for apps
