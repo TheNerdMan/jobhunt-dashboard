@@ -2,6 +2,13 @@ import { ref, reactive, computed, watch, nextTick, type Ref, type ComputedRef } 
 import { Chart, type ChartConfiguration } from 'chart.js/auto'
 
 // Types
+export interface AppNotes {
+  research: string
+  interviewPrep: string
+  questionsToAsk: string
+  interviewNotes: string
+}
+
 export interface JobApplication {
   id: number
   company: string
@@ -13,6 +20,7 @@ export interface JobApplication {
   date: string
   link: string
   notes: string
+  appNotes?: AppNotes
 }
 
 export interface Recruiter {
@@ -31,6 +39,7 @@ export interface TimelineEvent {
   date: string
   text: string
   type: 'act' | 'warn' | 'win'
+  auto?: boolean
 }
 
 export interface Note {
@@ -39,11 +48,18 @@ export interface Note {
   text: string
 }
 
+export interface Settings {
+  followUpDays: number
+  staleDays: number
+  recruiterCheckInDays: number
+}
+
 export interface JobHuntData {
   apps: JobApplication[]
   recruiters: Recruiter[]
   timeline: TimelineEvent[]
   notes: Note[]
+  settings?: Settings
 }
 
 export interface Metrics {
@@ -62,9 +78,22 @@ export interface SourceLegendItem {
   color: string
 }
 
+export interface ActionItem {
+  type: 'follow-up' | 'stale' | 'interview-prep' | 'recruiter-checkin'
+  appId?: number
+  recruiterId?: number
+  company: string
+  role?: string
+  daysOverdue: number
+  description: string
+}
+
 // Constants
 const STORAGE_KEY = 'jobhunt_v3'
-const STALE_DAYS = 14
+export const DEFAULT_FOLLOW_UP_DAYS = 7
+export const DEFAULT_STALE_DAYS = 14
+export const DEFAULT_RECRUITER_CHECKIN_DAYS = 14
+
 const DEMO_SOURCE_COLORS: Record<string, string> = {
   'TalentBridge':     '#4f8ef7',
   'LinkedIn':         '#f5a623',
@@ -148,7 +177,17 @@ const DEFAULT_DATA: JobHuntData = {
 function loadData(): JobHuntData {
   try {
     const s = localStorage.getItem(STORAGE_KEY)
-    return s ? JSON.parse(s) : JSON.parse(JSON.stringify(DEFAULT_DATA))
+    if (!s) return JSON.parse(JSON.stringify(DEFAULT_DATA))
+    const parsed: JobHuntData = JSON.parse(s)
+    // Migrate: ensure settings exist
+    if (!parsed.settings) {
+      parsed.settings = {
+        followUpDays: DEFAULT_FOLLOW_UP_DAYS,
+        staleDays: DEFAULT_STALE_DAYS,
+        recruiterCheckInDays: DEFAULT_RECRUITER_CHECKIN_DAYS
+      }
+    }
+    return parsed
   } catch {
     return JSON.parse(JSON.stringify(DEFAULT_DATA))
   }
@@ -163,16 +202,20 @@ function fmtDate(d: string): string {
   return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
 }
 
+function fmtDateShort(): string {
+  return new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+}
+
 function daysAgo(d: string): number | null {
   if (!d) return null
   return Math.floor((new Date().getTime() - new Date(d).getTime()) / 86400000)
 }
 
-function effectiveStatus(a: JobApplication): string {
+function effectiveStatus(a: JobApplication, staleDays: number = DEFAULT_STALE_DAYS): string {
   if (a.status !== 'Applied') return a.status
   if (!a.date) return 'Applied'
   const days = daysAgo(a.date)
-  return days !== null && days >= STALE_DAYS ? 'Stale' : 'Applied'
+  return days !== null && days >= staleDays ? 'Stale' : 'Applied'
 }
 
 function mkInitials(name: string): string {
@@ -189,7 +232,8 @@ function blankApp(): Omit<JobApplication, 'id'> {
     salary: '',
     date: new Date().toISOString().slice(0, 10),
     link: '',
-    notes: ''
+    notes: '',
+    appNotes: { research: '', interviewPrep: '', questionsToAsk: '', interviewNotes: '' }
   }
 }
 
@@ -218,6 +262,10 @@ function blankNote(): Omit<Note, 'id'> {
     source: '',
     text: ''
   }
+}
+
+export function blankAppNotes(): AppNotes {
+  return { research: '', interviewPrep: '', questionsToAsk: '', interviewNotes: '' }
 }
 
 // Chart management
@@ -300,6 +348,7 @@ function buildCharts(apps: JobApplication[]): SourceLegendItem[] {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        // @ts-expect-error cutout is valid for doughnut charts
         cutout: '65%',
         plugins: {
           legend: { display: false },
@@ -323,29 +372,34 @@ export interface UseJobHuntDataReturn {
   recruiters: Ref<Recruiter[]>
   timeline: Ref<TimelineEvent[]>
   notes: Ref<Note[]>
+  settings: Ref<Settings>
   
   // Computed
   dayCount: ComputedRef<number>
   weeksSince: ComputedRef<string>
   metrics: ComputedRef<Metrics>
   sourceLegend: Ref<SourceLegendItem[]>
+  actionItems: ComputedRef<ActionItem[]>
   
   // Functions
   refreshCharts: () => Promise<void>
   exportData: () => void
   importData: (e: Event) => void
   resetToDefaults: () => void
+  addAutoTimelineEvent: (text: string, type?: TimelineEvent['type']) => void
   
   // Helpers
   fmtDate: (d: string) => string
+  fmtDateShort: () => string
   daysAgo: (d: string) => number | null
-  effectiveStatus: (a: JobApplication) => string
+  effectiveStatus: (a: JobApplication, staleDays?: number) => string
   mkInitials: (name: string) => string
   nextId: (arr: { id: number }[]) => number
   blankApp: () => Omit<JobApplication, 'id'>
   blankRec: () => Omit<Recruiter, 'id'>
   blankTl: () => Omit<TimelineEvent, 'id'>
   blankNote: () => Omit<Note, 'id'>
+  blankAppNotes: () => AppNotes
   
   // Constants
   STALE_DAYS: number
@@ -358,14 +412,20 @@ export function useJobHuntData(): UseJobHuntDataReturn {
   const recruiters = ref<Recruiter[]>(d.recruiters)
   const timeline = ref<TimelineEvent[]>(d.timeline)
   const notes = ref<Note[]>(d.notes)
+  const settings = ref<Settings>(d.settings ?? {
+    followUpDays: DEFAULT_FOLLOW_UP_DAYS,
+    staleDays: DEFAULT_STALE_DAYS,
+    recruiterCheckInDays: DEFAULT_RECRUITER_CHECKIN_DAYS
+  })
 
   // Auto-save to localStorage
-  watch([apps, recruiters, timeline, notes], () => {
+  watch([apps, recruiters, timeline, notes, settings], () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       apps: apps.value,
       recruiters: recruiters.value,
       timeline: timeline.value,
-      notes: notes.value
+      notes: notes.value,
+      settings: settings.value
     }))
   }, { deep: true })
 
@@ -374,15 +434,81 @@ export function useJobHuntData(): UseJobHuntDataReturn {
   const weeksSince = computed(() => (dayCount.value / 7).toFixed(1))
 
   const metrics = computed<Metrics>(() => {
+    const staleDays = settings.value.staleDays
     const total = apps.value.length
-    const denied = apps.value.filter(a => effectiveStatus(a) === 'Denied').length
-    const interviews = apps.value.filter(a => effectiveStatus(a) === 'Interview').length
-    const offers = apps.value.filter(a => effectiveStatus(a) === 'Offer').length
-    const active = apps.value.filter(a => effectiveStatus(a) === 'Applied').length
-    const stale = apps.value.filter(a => effectiveStatus(a) === 'Stale').length
+    const denied = apps.value.filter(a => effectiveStatus(a, staleDays) === 'Denied').length
+    const interviews = apps.value.filter(a => effectiveStatus(a, staleDays) === 'Interview').length
+    const offers = apps.value.filter(a => effectiveStatus(a, staleDays) === 'Offer').length
+    const active = apps.value.filter(a => effectiveStatus(a, staleDays) === 'Applied').length
+    const stale = apps.value.filter(a => effectiveStatus(a, staleDays) === 'Stale').length
     const rate = total ? Math.round((denied / total) * 100) : 0
     
     return { total, denied, interviews, offers, active, stale, rate }
+  })
+
+  // Action items computed
+  const actionItems = computed<ActionItem[]>(() => {
+    const items: ActionItem[] = []
+    const { followUpDays, staleDays, recruiterCheckInDays } = settings.value
+
+    for (const app of apps.value) {
+      const days = daysAgo(app.date)
+      const status = effectiveStatus(app, staleDays)
+
+      // Follow-up needed: Applied, no response after followUpDays
+      if (app.status === 'Applied' && days !== null && days >= followUpDays && days < staleDays) {
+        items.push({
+          type: 'follow-up',
+          appId: app.id,
+          company: app.company,
+          role: app.title,
+          daysOverdue: days - followUpDays,
+          description: `No response after ${days} days — consider chasing`
+        })
+      }
+
+      // Stale alert: Applied, past stale threshold
+      if (status === 'Stale') {
+        items.push({
+          type: 'stale',
+          appId: app.id,
+          company: app.company,
+          role: app.title,
+          daysOverdue: days !== null ? days - staleDays : 0,
+          description: `${days} days since application — likely gone quiet`
+        })
+      }
+
+      // Interview prep reminder
+      if (app.status === 'Interview') {
+        items.push({
+          type: 'interview-prep',
+          appId: app.id,
+          company: app.company,
+          role: app.title,
+          daysOverdue: 0,
+          description: 'Active interview — prepare questions & research'
+        })
+      }
+    }
+
+    // Recruiter check-in reminders
+    for (const rec of recruiters.value) {
+      const days = daysAgo(rec.date)
+      if (days !== null && days >= recruiterCheckInDays) {
+        items.push({
+          type: 'recruiter-checkin',
+          recruiterId: rec.id,
+          company: rec.company,
+          role: rec.name,
+          daysOverdue: days - recruiterCheckInDays,
+          description: `Last contact ${days} days ago — check in`
+        })
+      }
+    }
+
+    // Sort: most overdue first
+    return items.sort((a, b) => b.daysOverdue - a.daysOverdue)
   })
 
   // Chart management
@@ -393,6 +519,18 @@ export function useJobHuntData(): UseJobHuntDataReturn {
     sourceLegend.value = buildCharts(apps.value)
   }
 
+  // Auto timeline event helper
+  function addAutoTimelineEvent(text: string, type: TimelineEvent['type'] = 'act'): void {
+    const event: TimelineEvent = {
+      id: nextId(timeline.value),
+      date: fmtDateShort(),
+      text,
+      type,
+      auto: true
+    }
+    timeline.value.push(event)
+  }
+
   // Import/Export functions
   function exportData(): void {
     const a = document.createElement('a')
@@ -400,7 +538,8 @@ export function useJobHuntData(): UseJobHuntDataReturn {
       apps: apps.value,
       recruiters: recruiters.value,
       timeline: timeline.value,
-      notes: notes.value
+      notes: notes.value,
+      settings: settings.value
     }, null, 2))
     a.download = 'job-hunt-data.json'
     a.click()
@@ -419,6 +558,7 @@ export function useJobHuntData(): UseJobHuntDataReturn {
         recruiters.value = d.recruiters || []
         timeline.value = d.timeline || []
         notes.value = d.notes || []
+        if (d.settings) settings.value = d.settings
       } catch {
         alert('Invalid JSON file.')
       }
@@ -433,6 +573,7 @@ export function useJobHuntData(): UseJobHuntDataReturn {
     recruiters.value = d.recruiters
     timeline.value = d.timeline
     notes.value = d.notes
+    settings.value = d.settings
   }
 
   return {
@@ -441,21 +582,25 @@ export function useJobHuntData(): UseJobHuntDataReturn {
     recruiters,
     timeline,
     notes,
+    settings,
     
     // Computed
     dayCount,
     weeksSince,
     metrics,
     sourceLegend,
+    actionItems,
     
     // Functions
     refreshCharts,
     exportData,
     importData,
     resetToDefaults,
+    addAutoTimelineEvent,
     
     // Helpers
     fmtDate,
+    fmtDateShort,
     daysAgo,
     effectiveStatus,
     mkInitials,
@@ -464,9 +609,10 @@ export function useJobHuntData(): UseJobHuntDataReturn {
     blankRec,
     blankTl,
     blankNote,
+    blankAppNotes,
     
     // Constants
-    STALE_DAYS,
+    STALE_DAYS: settings.value.staleDays,
     AVATAR_COLORS
   }
 }

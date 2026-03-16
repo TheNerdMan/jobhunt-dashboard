@@ -12,6 +12,7 @@
       </div>
       <div class="tl-text">
         {{ e.text }}
+        <span v-if="e.auto" class="tl-auto-tag">auto</span>
         <button class="del-btn" style="margin-left:8px;" @click="$emit('delete', i)">Del</button>
       </div>
     </div>
@@ -104,5 +105,20 @@ function saveTimelineEvent(formData: Omit<TimelineEvent, 'id'>) {
   color:var(--text-muted);
   line-height:1.6;
   padding-bottom:14px;
+}
+
+.tl-auto-tag{
+  display:inline-block;
+  font-size:9px;
+  font-weight:500;
+  padding:1px 5px;
+  border-radius:3px;
+  background:var(--accent-dim);
+  color:var(--accent);
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+  margin-left:6px;
+  vertical-align:middle;
+  font-family:'DM Mono',monospace;
 }
 </style>

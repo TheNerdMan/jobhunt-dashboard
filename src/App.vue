@@ -16,7 +16,10 @@
         class="tab-btn"
         :class="{ active: activeTab === tab.id }"
         @click="activeTab = tab.id"
-      >{{ tab.label }}</button>
+      >
+        {{ tab.label }}
+        <span v-if="tab.id === 'actions' && actionItems.length > 0" class="tab-badge">{{ actionItems.length }}</span>
+      </button>
     </nav>
 
     <!-- Home: Metrics + Charts -->
@@ -24,7 +27,7 @@
       <MetricsGrid
         :metrics="metrics"
         :recruiterCount="recruiters.length"
-        :stale-days="STALE_DAYS"
+        :stale-days="settings.staleDays"
       />
       <ChartsGrid
         :sourceLegend="sourceLegend"
@@ -74,6 +77,16 @@
         />
       </div>
     </template>
+
+    <!-- Actions tab -->
+    <template v-else-if="activeTab === 'actions'">
+      <ActionsTab @go-to-app="goToApp" />
+    </template>
+
+    <!-- Settings tab -->
+    <template v-else-if="activeTab === 'settings'">
+      <SettingsPanel />
+    </template>
   </div>
 </template>
 
@@ -87,21 +100,26 @@ import ApplicationsTable from './components/ApplicationsTable.vue'
 import RecruitersCard from './components/RecruitersCard.vue'
 import NotesCard from './components/NotesCard.vue'
 import TimelineCard from './components/TimelineCard.vue'
+import ActionsTab from './components/ActionsTab.vue'
+import SettingsPanel from './components/SettingsPanel.vue'
 
 const {
   apps,
   recruiters,
   timeline,
   notes,
+  settings,
   dayCount,
   weeksSince,
   metrics,
   sourceLegend,
+  actionItems,
   refreshCharts,
   exportData,
   importData,
   resetToDefaults,
   nextId,
+  addAutoTimelineEvent,
   STALE_DAYS
 } = useJobHuntData()
 
@@ -112,6 +130,8 @@ const tabs = [
   { id: 'timeline',     label: 'Timeline' },
   { id: 'interviews',   label: 'Interviews' },
   { id: 'recruiters',   label: 'Recruiters' },
+  { id: 'actions',      label: 'Actions' },
+  { id: 'settings',     label: 'Settings' },
 ]
 const activeTab = ref('home')
 
@@ -126,17 +146,33 @@ watch(activeTab, (tab) => {
   if (tab === 'home') refreshCharts()
 })
 
+// Navigate to an application (from actions tab)
+function goToApp(appId: number | undefined) {
+  if (!appId) return
+  activeTab.value = 'applications'
+}
+
 // CRUD operations for apps
-function saveApp(appData: Omit<JobApplication, 'id'>, editIndex: number | null = null): void {
+// Now receives previousStatus so we can auto-log timeline events
+function saveApp(appData: Omit<JobApplication, 'id'>, editIndex: number | null = null, previousStatus?: string): void {
   if (!appData.company.trim()) return
-  
+
   const obj = { ...appData }
   if (editIndex !== null) {
     const updatedApp: JobApplication = { ...obj, id: apps.value[editIndex].id }
     apps.value.splice(editIndex, 1, updatedApp)
+
+    // Auto-log timeline if status changed
+    if (previousStatus && previousStatus !== appData.status) {
+      addAutoTimelineEvent(
+        `${appData.company} — status changed from ${previousStatus} to ${appData.status}`,
+        appData.status === 'Offer' ? 'win' : appData.status === 'Denied' || appData.status === 'Withdrawn' ? 'warn' : 'act'
+      )
+    }
   } else {
     const newApp: JobApplication = { ...obj, id: nextId(apps.value) }
     apps.value.push(newApp)
+    addAutoTimelineEvent(`Applied to ${appData.company} — ${appData.title}`)
   }
 }
 
@@ -148,7 +184,7 @@ function deleteApp(index: number): void {
 // CRUD operations for recruiters
 function saveRecruiter(recData: Omit<Recruiter, 'id'>, editIndex: number | null = null): void {
   if (!recData.name.trim()) return
-  
+
   const obj = { ...recData }
   if (editIndex !== null) {
     const updatedRec: Recruiter = { ...obj, id: recruiters.value[editIndex].id }
@@ -195,9 +231,11 @@ function deleteNote(index: number): void {
   gap: 4px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 1.5rem;
+  flex-wrap: wrap;
 }
 
 .tab-btn {
+  position: relative;
   padding: 8px 16px;
   font-size: 13px;
   font-weight: 500;
@@ -218,5 +256,22 @@ function deleteNote(index: number): void {
 .tab-btn.active {
   color: var(--accent);
   border-bottom-color: var(--accent);
+}
+
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--amber);
+  color: #000;
+  font-size: 9px;
+  font-weight: 700;
+  margin-left: 5px;
+  vertical-align: middle;
+  font-family: 'DM Mono', monospace;
 }
 </style>
