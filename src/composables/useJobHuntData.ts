@@ -94,16 +94,6 @@ export const DEFAULT_FOLLOW_UP_DAYS = 7
 export const DEFAULT_STALE_DAYS = 14
 export const DEFAULT_RECRUITER_CHECKIN_DAYS = 14
 
-const DEMO_SOURCE_COLORS: Record<string, string> = {
-  'TalentBridge':     '#4f8ef7',
-  'LinkedIn':         '#f5a623',
-  'NextStep Recruit': '#3fcf8e',
-  'Apex Talent':      '#f7614f',
-  'Pinnacle Search':  '#a78bfa',
-  'Direct':           '#2dd4bf',
-}
-const AVATAR_COLORS = ['av-blue', 'av-teal', 'av-purple', 'av-amber', 'av-green'] as const
-
 // Demo start date: 14 days before today so the demo data looks "current"
 function getDemoStartDate(): string {
   const d = new Date()
@@ -122,6 +112,16 @@ function demoDateShort(daysFromStart: number): string {
   d.setDate(d.getDate() + daysFromStart)
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
 }
+
+const DEMO_SOURCE_COLORS: Record<string, string> = {
+  'TalentBridge':     '#4f8ef7',
+  'LinkedIn':         '#f5a623',
+  'NextStep Recruit': '#3fcf8e',
+  'Apex Talent':      '#f7614f',
+  'Pinnacle Search':  '#a78bfa',
+  'Direct':           '#2dd4bf',
+}
+const AVATAR_COLORS = ['av-blue', 'av-teal', 'av-purple', 'av-amber', 'av-green'] as const
 
 const DEFAULT_DATA: JobHuntData = {
   apps: [
@@ -430,7 +430,7 @@ export function useJobHuntData(): UseJobHuntDataReturn {
   }, { deep: true })
 
   // Computed properties
-  const dayCount = computed(() => Math.floor((new Date().getTime() - new Date('2026-03-02').getTime()) / 86400000) + 1)
+  const dayCount = computed(() => Math.floor((new Date().getTime() - new Date(getDemoStartDate()).getTime()) / 86400000) + 1)
   const weeksSince = computed(() => (dayCount.value / 7).toFixed(1))
 
   const metrics = computed<Metrics>(() => {

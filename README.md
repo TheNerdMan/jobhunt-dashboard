@@ -1,159 +1,62 @@
-# Job Hunt Dashboard - Vue 3 + TypeScript + Composition API
+# Job Hunt Dashboard
 
-## Project Structure
+A free, open source, privacy-first job search tracker that runs entirely in your browser. No account required, no data leaves your device.
 
-This Vue 3 application is built with **TypeScript** and **Composition API** setup syntax, extracted from the original single HTML file into a modular component-based architecture:
+**[Live Demo](https://your-username.github.io/jobhunt-dashboard/)** <!-- update this URL after deploying -->
 
-```
-jobhunt-dashboard/
-├── index.html                          # Entry point
-├── package.json                        # Dependencies and scripts
-├── vite.config.js                      # Vite configuration
-├── tsconfig.json                       # TypeScript configuration
-├── env.d.ts                           # Environment type declarations
-├── .gitignore                          # Git ignore file
-│
-├── src/
-│   ├── main.ts                         # App entry point (TypeScript)
-│   ├── style.css                       # Global styles
-│   ├── App.vue                         # Main app component (TypeScript)
-│   │
-│   ├── composables/
-│   │   └── useJobHuntData.ts          # Data management composable (TypeScript)
-│   │
-│   └── components/
-│       ├── DashboardHeader.vue        # Header with day counter & import/export
-│       ├── MetricsGrid.vue            # 4 metric cards (total, active, interviews, declined)
-│       ├── ChartsGrid.vue             # Applications by date & source charts
-│       ├── ApplicationsTable.vue      # Main applications table with filtering/sorting
-│       ├── ApplicationModal.vue       # Modal for adding/editing applications
-│       ├── RecruitersCard.vue         # Recruitment agents list
-│       ├── RecruiterModal.vue         # Modal for adding/editing recruiters
-│       ├── NotesCard.vue              # Notes & tips list
-│       ├── NoteModal.vue              # Modal for adding notes
-│       ├── TimelineCard.vue           # Timeline of events
-│       └── TimelineModal.vue          # Modal for adding timeline events
-```
+---
 
-## 🎯 **TypeScript Features**
+## Features
 
-### **Type Safety**
-- **Strict TypeScript configuration** with full type checking
-- **Interface definitions** for all data structures:
-  - `JobApplication` - Application data with status types
-  - `Recruiter` - Recruiter contact information
-  - `TimelineEvent` - Timeline events with type indicators
-  - `Note` - Notes and tips data
-  - `Metrics` - Computed metrics interface
-  
-### **Composition API Setup**
-- **Setup script syntax** (`<script setup lang="ts">`) in all components
-- **Type-safe props** with interface definitions
-- **Typed emits** for component communication
-- **Reactive references** with proper TypeScript inference
+- **Applications** — Track every job application with status, salary, location, source, and rich per-application notes (research, interview prep, questions to ask, post-interview debrief)
+- **Kanban board** — Drag-and-drop applications between status columns (Applied, Interview, Offer, Denied, Withdrawn)
+- **Interviews** — Filtered view of all active interview-stage applications
+- **Timeline** — Chronological log of your job search events, with auto-logging on status changes
+- **Recruiters** — Contact list for recruitment agents with last-contact tracking
+- **Actions** — Smart to-do list surfacing follow-up reminders, stale application alerts, interview prep prompts, and recruiter check-in reminders
+- **Charts** — Applications by date (bar) and by source (doughnut) on the home dashboard
+- **Import / Export** — Download your data as JSON and restore it at any time
+- **Settings** — Configure follow-up, stale, and recruiter check-in day thresholds
 
-### **Enhanced Developer Experience**
-- **IntelliSense support** with auto-completion
-- **Compile-time error checking**
-- **Type-safe Chart.js integration**
-- **Proper return type annotations**
+## Privacy
 
-## Components Overview
-
-All components now use **TypeScript** and **Composition API setup syntax**:
-
-### **DashboardHeader**
-```typescript
-interface Props {
-  dayCount: number
-  weeksSince: string
-}
-```
-
-### **MetricsGrid**  
-```typescript
-interface Props {
-  metrics: Metrics
-  recruiterCount: number
-  staleDays: number
-}
-```
-
-### **ApplicationsTable**
-```typescript
-interface Props {
-  apps: JobApplication[]
-}
-
-interface Emits {
-  save: [appData: Omit<JobApplication, 'id'>, editIndex: number | null]
-  delete: [index: number]
-}
-```
-
-## Data Management
-
-The **`useJobHuntData`** composable provides:
-```typescript
-interface UseJobHuntDataReturn {
-  // Reactive data
-  apps: Ref<JobApplication[]>
-  recruiters: Ref<Recruiter[]>
-  timeline: Ref<TimelineEvent[]>
-  notes: Ref<Note[]>
-  
-  // Computed properties
-  dayCount: ComputedRef<number>
-  weeksSince: ComputedRef<string>
-  metrics: ComputedRef<Metrics>
-  
-  // Functions with proper typing
-  refreshCharts: () => Promise<void>
-  exportData: () => void
-  importData: (e: Event) => void
-  // ... more typed functions
-}
-```
+All data is stored in your browser's `localStorage`. Nothing is sent to any server. There are no accounts, no tracking, and no external API calls (except loading fonts from Google Fonts).
 
 ## Getting Started
 
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+**Use the live demo** — just open the link above and start adding your applications.
 
-2. **Start development server:**
-   ```bash
-   npm run dev
-   ```
+**Or run it locally:**
 
-3. **Type checking:**
-   ```bash
-   npm run type-check
-   ```
+```bash
+git clone https://github.com/your-username/jobhunt-dashboard.git
+cd jobhunt-dashboard
+npm install
+npm run dev
+```
 
-4. **Build for production:**
-   ```bash
-   npm run build
-   ```
+The app will be available at `http://localhost:3000`.
 
-The application will be available at `http://localhost:3000`
+## Build
 
-## 🚀 **TypeScript Benefits**
+```bash
+npm run build
+```
 
-- ✅ **Compile-time error detection**
-- ✅ **IntelliSense and auto-completion**
-- ✅ **Refactoring safety**
-- ✅ **Self-documenting code with interfaces**
-- ✅ **Better maintainability**
-- ✅ **IDE support with type hints**
+Output goes to `dist/`. Serve it from any static file host.
 
-## Architecture Improvements
+## Tech Stack
 
-- **Composition API setup syntax** for cleaner, more maintainable code
-- **Type-safe component props and emits**  
-- **Strict TypeScript configuration**
-- **Proper Chart.js TypeScript integration**
-- **Interface-driven development**
+- [Vue 3](https://vuejs.org/) with Composition API and `<script setup>`
+- [TypeScript](https://www.typescriptlang.org/) in strict mode
+- [Vite](https://vitejs.dev/) for dev server and bundling
+- [Chart.js](https://www.chartjs.org/) for charts
+- Native HTML5 drag-and-drop for the Kanban board
 
-The application maintains **all original functionality** while providing a modern, type-safe development experience! 🎉
+## Contributing
+
+Pull requests are welcome. For significant changes, open an issue first to discuss what you'd like to change.
+
+## License
+
+[GPL v3](LICENSE)
