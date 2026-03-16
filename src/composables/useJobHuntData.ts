@@ -52,6 +52,7 @@ export interface Settings {
   followUpDays: number
   staleDays: number
   recruiterCheckInDays: number
+  sourceColors: Record<string, string>
 }
 
 export interface JobHuntData {
@@ -113,6 +114,23 @@ function demoDateShort(daysFromStart: number): string {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
 }
 
+// Palette cycled when assigning a colour to a brand-new source
+const SOURCE_COLOR_PALETTE = [
+  '#4f8ef7', // blue
+  '#f5a623', // amber
+  '#3fcf8e', // green
+  '#f7614f', // red
+  '#a78bfa', // purple
+  '#2dd4bf', // teal
+  '#f472b6', // pink
+  '#fb923c', // orange
+  '#34d399', // emerald
+  '#60a5fa', // sky
+  '#c084fc', // violet
+  '#facc15', // yellow
+]
+
+// The colours for the demo data (keyed by source name)
 const DEMO_SOURCE_COLORS: Record<string, string> = {
   'TalentBridge':     '#4f8ef7',
   'LinkedIn':         '#f5a623',
@@ -121,6 +139,7 @@ const DEMO_SOURCE_COLORS: Record<string, string> = {
   'Pinnacle Search':  '#a78bfa',
   'Direct':           '#2dd4bf',
 }
+
 const AVATAR_COLORS = ['av-blue', 'av-teal', 'av-purple', 'av-amber', 'av-green'] as const
 
 const DEFAULT_DATA: JobHuntData = {
@@ -184,8 +203,13 @@ function loadData(): JobHuntData {
       parsed.settings = {
         followUpDays: DEFAULT_FOLLOW_UP_DAYS,
         staleDays: DEFAULT_STALE_DAYS,
-        recruiterCheckInDays: DEFAULT_RECRUITER_CHECKIN_DAYS
+        recruiterCheckInDays: DEFAULT_RECRUITER_CHECKIN_DAYS,
+        sourceColors: {}
       }
+    }
+    // Migrate: ensure sourceColors exists
+    if (!parsed.settings.sourceColors) {
+      parsed.settings.sourceColors = {}
     }
     return parsed
   } catch {
@@ -272,7 +296,7 @@ export function blankAppNotes(): AppNotes {
 let timeChart: Chart | null = null
 let sourceChart: Chart | null = null
 
-function buildCharts(apps: JobApplication[]): SourceLegendItem[] {
+function buildCharts(apps: JobApplication[], sourceColors: Record<string, string>): SourceLegendItem[] {
   const byDate: Record<string, number> = {}
   apps.forEach(a => {
     const k = fmtDate(a.date)
@@ -330,7 +354,7 @@ function buildCharts(apps: JobApplication[]): SourceLegendItem[] {
   
   const sLabels = Object.keys(bySource)
   const sCounts = sLabels.map(k => bySource[k])
-  const sColors = sLabels.map(k => DEMO_SOURCE_COLORS[k] || '#888')
+  const sColors = sLabels.map(k => sourceColors[k] || '#888')
   
   if (sourceChart) sourceChart.destroy()
   const sc = document.getElementById('sourceChart') as HTMLCanvasElement | null
@@ -387,6 +411,7 @@ export interface UseJobHuntDataReturn {
   importData: (e: Event) => void
   resetToDefaults: () => void
   addAutoTimelineEvent: (text: string, type?: TimelineEvent['type']) => void
+  ensureSourceColor: (source: string) => void
   
   // Helpers
   fmtDate: (d: string) => string
@@ -415,7 +440,8 @@ export function useJobHuntData(): UseJobHuntDataReturn {
   const settings = ref<Settings>(d.settings ?? {
     followUpDays: DEFAULT_FOLLOW_UP_DAYS,
     staleDays: DEFAULT_STALE_DAYS,
-    recruiterCheckInDays: DEFAULT_RECRUITER_CHECKIN_DAYS
+    recruiterCheckInDays: DEFAULT_RECRUITER_CHECKIN_DAYS,
+    sourceColors: {}
   })
 
   // Auto-save to localStorage
@@ -513,10 +539,19 @@ export function useJobHuntData(): UseJobHuntDataReturn {
 
   // Chart management
   const sourceLegend = ref<SourceLegendItem[]>([])
-  
+
+  // Assign a colour to a source if it doesn't already have one
+  function ensureSourceColor(source: string): void {
+    if (!source || settings.value.sourceColors[source]) return
+    const usedColors = Object.values(settings.value.sourceColors)
+    const next = SOURCE_COLOR_PALETTE.find(c => !usedColors.includes(c))
+      ?? SOURCE_COLOR_PALETTE[usedColors.length % SOURCE_COLOR_PALETTE.length]
+    settings.value.sourceColors[source] = next
+  }
+
   async function refreshCharts(): Promise<void> {
     await nextTick()
-    sourceLegend.value = buildCharts(apps.value)
+    sourceLegend.value = buildCharts(apps.value, settings.value.sourceColors)
   }
 
   // Auto timeline event helper
@@ -597,6 +632,7 @@ export function useJobHuntData(): UseJobHuntDataReturn {
     importData,
     resetToDefaults,
     addAutoTimelineEvent,
+    ensureSourceColor,
     
     // Helpers
     fmtDate,

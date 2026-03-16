@@ -86,7 +86,7 @@
 
     <!-- Settings tab -->
     <template v-else-if="activeTab === 'settings'">
-      <SettingsPanel />
+      <SettingsPanel @color-changed="refreshCharts" />
     </template>
   </div>
 </template>
@@ -122,6 +122,7 @@ const {
   resetToDefaults,
   nextId,
   addAutoTimelineEvent,
+  ensureSourceColor,
   STALE_DAYS
 } = useJobHuntData()
 
@@ -181,6 +182,9 @@ function goToApp(appId: number | undefined) {
 // Now receives previousStatus so we can auto-log timeline events
 function saveApp(appData: Omit<JobApplication, 'id'>, editIndex: number | null = null, previousStatus?: string): void {
   if (!appData.company.trim()) return
+
+  // Assign a colour to this source if it's new
+  if (appData.source) ensureSourceColor(appData.source)
 
   const obj = { ...appData }
   if (editIndex !== null) {
