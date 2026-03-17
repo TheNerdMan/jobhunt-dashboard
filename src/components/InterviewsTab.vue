@@ -64,26 +64,50 @@
               :key="tab.key"
               class="ic-tab-btn"
               :class="{ active: activeNoteTab[app.id] === tab.key, filled: isTabFilled(app, tab.key) }"
-              @click="activeNoteTab[app.id] = tab.key"
+              @click="activeNoteTab[app.id] = tab.key; cancelEditNote()"
             >
               {{ tab.label }}
               <span v-if="isTabFilled(app, tab.key)" class="ic-tab-dot"></span>
             </button>
           </div>
 
-          <!-- Note content (read-only display) -->
+          <!-- Note content: inline editable -->
           <div class="ic-note-body">
-            <div v-if="currentNote(app, activeNoteTab[app.id] || 'general')" class="ic-note-text">
-              {{ currentNote(app, activeNoteTab[app.id] || 'general') }}
-            </div>
-            <div v-else class="ic-note-empty">
-              No {{ noteLabel(activeNoteTab[app.id] || 'general') }} yet — click Edit to add notes.
-            </div>
+            <template v-if="editingNote.appId === app.id && editingNote.tabKey === (activeNoteTab[app.id] || 'general')">
+              <textarea
+                class="ic-note-textarea"
+                v-model="inlineNoteValue"
+                :placeholder="`Add ${noteLabel(activeNoteTab[app.id] || 'general')} here…`"
+                @keydown.escape="cancelEditNote"
+                @input="autoGrow"
+              ></textarea>
+              <div class="ic-note-edit-actions">
+                <button class="ic-btn ic-btn-save" @click="saveNoteInline(app, idx)">Save</button>
+                <button class="ic-btn" @click="cancelEditNote">Cancel</button>
+              </div>
+            </template>
+            <template v-else>
+              <div
+                v-if="currentNote(app, activeNoteTab[app.id] || 'general')"
+                class="ic-note-text ic-note-text--clickable"
+                :title="`Click to edit ${noteLabel(activeNoteTab[app.id] || 'general')}`"
+                @click="startEditNote(app, activeNoteTab[app.id] || 'general')"
+              >
+                {{ currentNote(app, activeNoteTab[app.id] || 'general') }}
+              </div>
+              <div
+                v-else
+                class="ic-note-empty ic-note-empty--clickable"
+                @click="startEditNote(app, activeNoteTab[app.id] || 'general')"
+              >
+                No {{ noteLabel(activeNoteTab[app.id] || 'general') }} yet — click to add notes.
+              </div>
+            </template>
           </div>
 
           <!-- Card actions -->
           <div class="ic-actions">
-            <button class="ic-btn ic-btn-edit" @click="openModal(idx)">Edit</button>
+            <button class="ic-btn ic-btn-edit" @click="openModal(idx)">Edit Application</button>
             <button class="ic-btn ic-btn-delete" @click="$emit('delete', idx)">Remove</button>
           </div>
         </div>
@@ -134,6 +158,11 @@ const activeNoteTab = reactive<Record<number, string>>({})
 // Highlighted card id (brief flash on programmatic navigation)
 const highlightedId = ref<number | null>(null)
 
+// Inline note editing state: tracks which app+tab is being edited
+const editingNote = reactive<{ appId: number | null; tabKey: string | null }>({ appId: null, tabKey: null })
+// Holds the live value while the textarea is open
+const inlineNoteValue = ref('')
+
 // Modal state
 const showModal = ref(false)
 const editIndex = ref<number | null>(null)
@@ -155,6 +184,7 @@ function appDays(app: JobApplication): number | null {
 function toggleExpand(id: number) {
   if (expandedId.value === id) {
     expandedId.value = null
+    cancelEditNote()
   } else {
     expandedId.value = id
     if (!activeNoteTab[id]) activeNoteTab[id] = 'general'
@@ -190,6 +220,58 @@ function currentNote(app: JobApplication, key: string): string {
 
 function noteLabel(key: string): string {
   return notesTabs.find(t => t.key === key)?.label.toLowerCase() || 'notes'
+}
+
+function autoGrow(e: Event) {
+  const el = e.target as HTMLTextAreaElement
+  el.style.height = 'auto'
+  el.style.height = el.scrollHeight + 'px'
+}
+
+function startEditNote(app: JobApplication, tabKey: string) {
+  editingNote.appId = app.id
+  editingNote.tabKey = tabKey
+  inlineNoteValue.value = currentNote(app, tabKey)
+  nextTick(() => {
+    const el = document.querySelector<HTMLTextAreaElement>('.ic-note-textarea')
+    if (el) {
+      el.style.height = 'auto'
+      el.style.height = el.scrollHeight + 'px'
+      el.focus()
+    }
+  })
+}
+
+function cancelEditNote() {
+  editingNote.appId = null
+  editingNote.tabKey = null
+  inlineNoteValue.value = ''
+}
+
+function saveNoteInline(app: JobApplication, idx: number) {
+  if (editingNote.appId !== app.id || editingNote.tabKey === null) return
+  const key = editingNote.tabKey
+  const val = inlineNoteValue.value
+
+  // Build the updated app with the new note value
+  const updatedAppNotes = { ...(app.appNotes ?? blankAppNotes()) }
+  let updatedNotes = app.notes ?? ''
+
+  if (key === 'general') {
+    updatedNotes = val
+  } else if (key === 'research') {
+    updatedAppNotes.research = val
+  } else if (key === 'prep') {
+    updatedAppNotes.interviewPrep = val
+  } else if (key === 'questions') {
+    updatedAppNotes.questionsToAsk = val
+  } else if (key === 'debrief') {
+    updatedAppNotes.interviewNotes = val
+  }
+
+  const formData: Omit<JobApplication, 'id'> = { ...app, notes: updatedNotes, appNotes: updatedAppNotes }
+  emit('save', formData, idx, undefined)
+  cancelEditNote()
 }
 
 function openModal(idx: number | null = null) {
@@ -504,10 +586,69 @@ defineExpose({ openModal, highlightApp })
   word-break: break-word;
 }
 
+.ic-note-text--clickable {
+  cursor: text;
+  border-radius: 4px;
+  padding: 4px 6px;
+  margin: -4px -6px;
+  transition: background 0.12s;
+}
+
+.ic-note-text--clickable:hover {
+  background: var(--surface3);
+}
+
 .ic-note-empty {
   font-size: 12px;
   color: var(--text-dim);
   font-style: italic;
+}
+
+.ic-note-empty--clickable {
+  cursor: text;
+  border-radius: 4px;
+  padding: 4px 6px;
+  margin: -4px -6px;
+  transition: background 0.12s;
+}
+
+.ic-note-empty--clickable:hover {
+  background: var(--surface3);
+  color: var(--text-muted);
+}
+
+.ic-note-textarea {
+  width: 100%;
+  min-height: 80px;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  line-height: 1.65;
+  padding: 8px 10px;
+  resize: none;
+  overflow: hidden;
+  outline: none;
+  box-sizing: border-box;
+  box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.12);
+}
+
+.ic-note-edit-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ic-btn-save {
+  border-color: rgba(79, 142, 247, 0.4);
+  background: var(--accent);
+  color: #fff;
+}
+
+.ic-btn-save:hover {
+  background: rgba(79, 142, 247, 0.85);
 }
 
 .ic-actions {
