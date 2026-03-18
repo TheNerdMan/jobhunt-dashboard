@@ -4,7 +4,7 @@
       <div>
         <h1 style="font-size:24px;font-weight:500;letter-spacing:-0.02em;">Job Hunt Dashboard</h1>
         <p style="font-size:13px;color:var(--text-muted);margin-top:4px;">
-          Started <span class="mono">02 Mar 2026</span> &mdash;
+          Started <span class="mono">{{ formattedStartDate }}</span> &mdash;
           Day <span class="mono">{{ dayCount }}</span> &mdash;
           {{ weeksSince }} weeks in
         </p>
@@ -34,7 +34,10 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 interface Props {
+  startDate: string
   dayCount: number
   weeksSince: string
   demoMode: boolean
@@ -47,8 +50,12 @@ interface Emits {
   startUsing: []
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 defineEmits<Emits>()
+
+const formattedStartDate = computed(() =>
+  new Date(props.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+)
 </script>
 
 <style scoped>
