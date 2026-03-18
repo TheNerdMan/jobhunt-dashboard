@@ -2,7 +2,7 @@
 
 A free, open source, privacy-first job search tracker that runs entirely in your browser. No account required, no data leaves your device.
 
-**[Live Demo](https://your-username.github.io/jobhunt-dashboard/)** <!-- update this URL after deploying -->
+**[Live Demo](https://www.nerdie.dev/jobhunt-dashboard/)** <!-- update this URL after deploying -->
 
 ---
 
