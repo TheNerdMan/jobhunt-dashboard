@@ -14,5 +14,9 @@
     "types": ["vite/client"],
     "strict": true,
     "skipLibCheck": true
+  },
+  "vueCompilerOptions": {
+    "target": 3.5,
+    "strictTemplates": true
   }
 }
