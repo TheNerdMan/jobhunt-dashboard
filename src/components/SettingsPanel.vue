@@ -69,6 +69,7 @@
             @click.stop
             @mousedown.stop
           >
+
             <hex-color-picker
               :color="colorOf(source)"
               @color-changed="onPickerChange(source, $event)"

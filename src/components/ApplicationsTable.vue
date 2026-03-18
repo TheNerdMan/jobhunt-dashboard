@@ -9,7 +9,7 @@
           <button :class="['vt-btn', { active: viewMode === 'board' }]" @click="viewMode = 'board'">Board</button>
         </div>
         <div v-if="viewMode === 'table'" class="filter-row">
-          <button v-for="f in ['all','Applied','Interview','Offer','Stale','Denied','Withdrawn']"
+          <button v-for="f in (['all','Applied','Interview','Offer','Stale','Denied','Withdrawn'] as const)"
                   :key="f"
                   class="filter-btn"
                   :class="{active:appFilter===f}"
