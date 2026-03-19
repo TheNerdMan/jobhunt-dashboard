@@ -24,7 +24,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Metrics } from '../composables/useJobHuntData'
+import type { Metrics } from '../../composables/useJobHuntData'
 
 interface Props {
   metrics: Metrics

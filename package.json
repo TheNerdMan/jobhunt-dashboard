@@ -7,7 +7,9 @@
     "build": "vue-tsc && vite build",
     "build:types": "vue-tsc --declaration --emitDeclarationOnly",
     "preview": "vite preview",
-    "type-check": "vue-tsc --noEmit"
+    "type-check": "vue-tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "chart.js": "^4.4.1",
@@ -16,9 +18,12 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.4",
+    "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.5.1",
+    "happy-dom": "^20.8.4",
     "typescript": "^5.3.3",
     "vite": "^5.1.4",
+    "vitest": "^2.1.9",
     "vue-tsc": "^2.2.12"
   }
 }

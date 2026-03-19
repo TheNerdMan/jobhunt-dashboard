@@ -28,8 +28,8 @@
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
-import { useJobHuntData, type TimelineEvent } from '../composables/useJobHuntData'
-import TimelineModal from './TimelineModal.vue'
+import { useJobHuntData, type TimelineEvent } from '../../composables/useJobHuntData'
+import TimelineModal from '../TimelineModal/TimelineModal.vue'
 
 interface Props {
   timeline: TimelineEvent[]

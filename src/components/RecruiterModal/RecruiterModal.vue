@@ -46,7 +46,7 @@
 
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
-import type { Recruiter } from '../composables/useJobHuntData'
+import type { Recruiter } from '../../composables/useJobHuntData'
 
 interface Props {
   recForm: Omit<Recruiter, 'id'>

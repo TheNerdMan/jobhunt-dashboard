@@ -116,8 +116,8 @@
 
 <script setup lang="ts">
 import { reactive, ref, watch } from 'vue'
-import type { JobApplication, AppNotes } from '../composables/useJobHuntData'
-import { blankAppNotes as makeBlankAppNotes } from '../composables/useJobHuntData'
+import type { JobApplication, AppNotes } from '../../composables/useJobHuntData'
+import { blankAppNotes as makeBlankAppNotes } from '../../composables/useJobHuntData'
 
 interface Props {
   appForm: Omit<JobApplication, 'id'>

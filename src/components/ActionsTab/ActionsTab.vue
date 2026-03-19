@@ -49,7 +49,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useJobHuntData, type ActionItem } from '../composables/useJobHuntData'
+import { useJobHuntData, type ActionItem } from '../../composables/useJobHuntData'
 
 interface Emits {
   'go-to-app': [appId: number | undefined]

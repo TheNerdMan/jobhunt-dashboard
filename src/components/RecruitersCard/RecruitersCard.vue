@@ -32,8 +32,8 @@
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
-import { useJobHuntData, type Recruiter } from '../composables/useJobHuntData'
-import RecruiterModal from './RecruiterModal.vue'
+import { useJobHuntData, type Recruiter } from '../../composables/useJobHuntData'
+import RecruiterModal from '../RecruiterModal/RecruiterModal.vue'
 
 interface Props {
   recruiters: Recruiter[]

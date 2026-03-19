@@ -120,8 +120,8 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue'
-import { useJobHuntData, type JobApplication } from '../composables/useJobHuntData'
-import ApplicationModal from './ApplicationModal.vue'
+import { useJobHuntData, type JobApplication } from '../../composables/useJobHuntData'
+import ApplicationModal from '../ApplicationModal/ApplicationModal.vue'
 
 interface Props {
   apps: JobApplication[]

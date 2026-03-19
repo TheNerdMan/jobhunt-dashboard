@@ -20,7 +20,7 @@
 
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
-import type { Note } from '../composables/useJobHuntData'
+import type { Note } from '../../composables/useJobHuntData'
 
 interface Props {
   noteForm: Omit<Note, 'id'>
