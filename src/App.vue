@@ -1,6 +1,7 @@
 <template>
   <div class="container">
     <DashboardHeader
+      :startDate="startDate"
       :dayCount="dayCount"
       :weeksSince="weeksSince"
       :demoMode="demoMode"
@@ -114,6 +115,7 @@ const {
   notes,
   settings,
   demoMode,
+  startDate,
   dayCount,
   weeksSince,
   metrics,

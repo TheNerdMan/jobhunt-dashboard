@@ -61,6 +61,7 @@ export interface JobHuntData {
   timeline: TimelineEvent[]
   notes: Note[]
   settings?: Settings
+  startDate?: string
 }
 
 export interface Metrics {
@@ -401,6 +402,7 @@ export interface UseJobHuntDataReturn {
   demoMode: Ref<boolean>
   
   // Computed
+  startDate: ComputedRef<string>
   dayCount: ComputedRef<number>
   weeksSince: ComputedRef<string>
   metrics: ComputedRef<Metrics>
@@ -450,14 +452,18 @@ const settings = ref<Settings>(_d.settings ?? {
   sourceColors: {}
 })
 
+// Stored start date — only used when not in demo mode
+const _startDate = ref<string>(_d.startDate ?? new Date().toISOString().slice(0, 10))
+
 // Auto-save to localStorage
-watch([apps, recruiters, timeline, notes, settings], () => {
+watch([apps, recruiters, timeline, notes, settings, _startDate], () => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     apps: apps.value,
     recruiters: recruiters.value,
     timeline: timeline.value,
     notes: notes.value,
-    settings: settings.value
+    settings: settings.value,
+    startDate: _startDate.value
   }))
 }, { deep: true })
 
@@ -465,7 +471,11 @@ watch([apps, recruiters, timeline, notes, settings], () => {
 const sourceLegend = ref<SourceLegendItem[]>([])
 
 // Computed properties — singletons
-const dayCount = computed(() => Math.floor((new Date().getTime() - new Date(getDemoStartDate()).getTime()) / 86400000) + 1)
+// In demo mode, the start date is always 14 days ago so the demo data looks current.
+// In non-demo mode, the start date is stored persistently (today when "Start now" is clicked,
+// or the date from the imported JSON).
+const startDate = computed<string>(() => demoMode.value ? getDemoStartDate() : _startDate.value)
+const dayCount = computed(() => Math.floor((new Date().getTime() - new Date(startDate.value).getTime()) / 86400000) + 1)
 const weeksSince = computed(() => (dayCount.value / 7).toFixed(1))
 
 const metrics = computed<Metrics>(() => {
@@ -571,7 +581,8 @@ function exportData(): void {
     recruiters: recruiters.value,
     timeline: timeline.value,
     notes: notes.value,
-    settings: settings.value
+    settings: settings.value,
+    startDate: startDate.value
   }, null, 2))
   a.download = 'job-hunt-data.json'
   a.click()
@@ -591,6 +602,7 @@ function importData(e: Event): void {
       timeline.value = d.timeline || []
       notes.value = d.notes || []
       if (d.settings) settings.value = d.settings
+      _startDate.value = d.startDate ?? new Date().toISOString().slice(0, 10)
       demoMode.value = false
       localStorage.setItem(DEMO_MODE_KEY, 'false')
     } catch {
@@ -611,6 +623,7 @@ function startUsing(): void {
     recruiterCheckInDays: DEFAULT_RECRUITER_CHECKIN_DAYS,
     sourceColors: {}
   }
+  _startDate.value = new Date().toISOString().slice(0, 10)
   demoMode.value = false
   localStorage.setItem(DEMO_MODE_KEY, 'false')
 }
@@ -638,6 +651,7 @@ export function useJobHuntData(): UseJobHuntDataReturn {
     demoMode,
     
     // Computed
+    startDate,
     dayCount,
     weeksSince,
     metrics,
