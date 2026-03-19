@@ -96,16 +96,16 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { useJobHuntData, type JobApplication, type Recruiter, type TimelineEvent, type Note } from './composables/useJobHuntData'
-import DashboardHeader from './components/DashboardHeader.vue'
-import MetricsGrid from './components/MetricsGrid.vue'
-import ChartsGrid from './components/ChartsGrid.vue'
-import ApplicationsTable from './components/ApplicationsTable.vue'
-import InterviewsTab from './components/InterviewsTab.vue'
-import RecruitersCard from './components/RecruitersCard.vue'
-import NotesCard from './components/NotesCard.vue'
-import TimelineCard from './components/TimelineCard.vue'
-import ActionsTab from './components/ActionsTab.vue'
-import SettingsPanel from './components/SettingsPanel.vue'
+import DashboardHeader from './components/DashboardHeader/DashboardHeader.vue'
+import MetricsGrid from './components/MetricsGrid/MetricsGrid.vue'
+import ChartsGrid from './components/ChartsGrid/ChartsGrid.vue'
+import ApplicationsTable from './components/ApplicationsTable/ApplicationsTable.vue'
+import InterviewsTab from './components/InterviewsTab/InterviewsTab.vue'
+import RecruitersCard from './components/RecruitersCard/RecruitersCard.vue'
+import NotesCard from './components/NotesCard/NotesCard.vue'
+import TimelineCard from './components/TimelineCard/TimelineCard.vue'
+import ActionsTab from './components/ActionsTab/ActionsTab.vue'
+import SettingsPanel from './components/SettingsPanel/SettingsPanel.vue'
 
 const {
   apps,
