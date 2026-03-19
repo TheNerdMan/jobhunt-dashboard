@@ -81,7 +81,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, nextTick } from 'vue'
-import { useJobHuntData, type JobApplication } from '../composables/useJobHuntData'
+import { useJobHuntData, type JobApplication } from '../../composables/useJobHuntData'
 
 interface Props {
     app: JobApplication

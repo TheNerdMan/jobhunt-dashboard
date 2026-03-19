@@ -98,7 +98,7 @@
 <script setup lang="ts">
 import { reactive, computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import 'vanilla-colorful/hex-color-picker.js'
-import { useJobHuntData, DEFAULT_FOLLOW_UP_DAYS, DEFAULT_STALE_DAYS, DEFAULT_RECRUITER_CHECKIN_DAYS } from '../composables/useJobHuntData'
+import { useJobHuntData, DEFAULT_FOLLOW_UP_DAYS, DEFAULT_STALE_DAYS, DEFAULT_RECRUITER_CHECKIN_DAYS } from '../../composables/useJobHuntData'
 
 const emit = defineEmits<{ colorChanged: [] }>()
 

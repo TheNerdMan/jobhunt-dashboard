@@ -45,9 +45,9 @@
 
 <script setup lang="ts">
 import { ref, reactive, nextTick } from 'vue'
-import { useJobHuntData, type JobApplication } from '../composables/useJobHuntData'
-import ApplicationModal from './ApplicationModal.vue'
-import InterviewCard from './InterviewCard.vue'
+import { useJobHuntData, type JobApplication } from '../../composables/useJobHuntData'
+import ApplicationModal from '../ApplicationModal/ApplicationModal.vue'
+import InterviewCard from '../InterviewCard/InterviewCard.vue'
 
 interface Props {
   apps: JobApplication[]

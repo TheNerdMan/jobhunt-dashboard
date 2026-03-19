@@ -30,7 +30,7 @@
 
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
-import type { TimelineEvent } from '../composables/useJobHuntData'
+import type { TimelineEvent } from '../../composables/useJobHuntData'
 
 interface Props {
   tlForm: Omit<TimelineEvent, 'id'>

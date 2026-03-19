@@ -24,8 +24,8 @@
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
-import { useJobHuntData, type Note } from '../composables/useJobHuntData'
-import NoteModal from './NoteModal.vue'
+import { useJobHuntData, type Note } from '../../composables/useJobHuntData'
+import NoteModal from '../NoteModal/NoteModal.vue'
 
 interface Props {
   notes: Note[]

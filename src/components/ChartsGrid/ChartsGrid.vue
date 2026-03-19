@@ -22,7 +22,7 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import type { SourceLegendItem } from '../composables/useJobHuntData'
+import type { SourceLegendItem } from '../../composables/useJobHuntData'
 
 interface Props {
   sourceLegend: SourceLegendItem[]
